@@ -26,9 +26,47 @@ Theta2 = reshape(nn_params((1 + (hidden_layer_size * (input_layer_size + 1))):en
 m = size(X, 1);
          
 % You need to return the following variables correctly 
-J = 0;
+
+X0 = [ones(m, 1) X];
+X1p = sigmoid( X0*Theta1');
+m1 = size(X1p, 1);
+X1 = [ones(m1,1) X1p];
+z2 = X1*Theta2';
+X2 = sigmoid( z2 );
+logX2 = log(X2); 
+logX21 = log(1-X2);
+onehot = bsxfun(@eq, y(:), 1:max(y));
+calJ = -onehot .* logX2 - (1-onehot).* logX21; 
+J = mean(sum(calJ,2));
+Theta10 = Theta1(:,2:(input_layer_size+1));
+Theta20 = Theta2(:,2:(hidden_layer_size+1));
+regJ = sum(sum(Theta10.*Theta10)) + sum(sum(Theta20.*Theta20));
+J += regJ * lambda / 2 / m; 
 Theta1_grad = zeros(size(Theta1));
 Theta2_grad = zeros(size(Theta2));
+for t = 1:m
+	% For the input layer, where l=1:
+	a1 = [1; X(t,:)'];
+	% For the hidden layers, where l=2:
+	z2 = Theta1 * a1;
+	a2 = [1; sigmoid(z2)];
+	z3 = Theta2 * a2;
+	a3 = sigmoid(z3);
+	yy = ([1:num_labels]==y(t))';
+	% For the delta values:
+	delta_3 = a3 - yy;
+	delta_2 = (Theta2' * delta_3) .* [1; sigmoidGradient(z2)];
+	delta_2 = delta_2(2:end); % Taking of the bias row
+	% delta_1 is not calculated because we do not associate error with the input    
+	% Big delta update
+	Theta1_grad = Theta1_grad + delta_2 * a1';
+	Theta2_grad = Theta2_grad + delta_3 * a2';
+end
+
+Theta1_grad = (1/m) * Theta1_grad + (lambda/m) * [zeros(size(Theta1, 1), 1) Theta1(:,2:end)];
+Theta2_grad = (1/m) * Theta2_grad + (lambda/m) * [zeros(size(Theta2, 1), 1) Theta2(:,2:end)];
+
+
 
 % ====================== YOUR CODE HERE ======================
 % Instructions: You should complete the code by working through the
